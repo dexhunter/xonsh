@@ -1,0 +1,63 @@
+[
+  {
+    "upstream_repo": "xonsh/xonsh",
+    "head_sha": "b3c9e1e34458b7464ad9c3ba4655f89c09d95d34",
+    "file": "xonsh/ansi_colors.py",
+    "function": "ansi_partial_color_format",
+    "native_test_cmd": "python -m pytest tests/test_ansi_colors.py",
+    "bench_cmd": "python osspr-intake/harness/ansi_partial_color_format.py",
+    "metric_kind": "peak_memory_bytes",
+    "baseline_value": 2565201,
+    "baseline_noise_pct": 0.0,
+    "metric_benchmark": "python osspr-intake/harness/ansi_partial_color_format.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "One call color-formats a 12,000-line directory listing written with {GREEN}...{RESET} markup (756,000 byte template; the joined escape string is 696,000 bytes).",
+    "notes": "The helper builds a Python list of one tiny string per literal and per color span, then joins it. On this listing the traced peak is 2.57 MiB against a 696 KiB result, so writing into a single buffer inside the function can drop more than 1 MiB of peak while leaving the escape string unchanged. Five tracemalloc peaks were identical. Overlap: open PRs and PRs merged since 2026-10-12 do not touch xonsh/ansi_colors.py or this function (recent prompt edits are xonsh/prompt/base.py, xonsh/prompt/cwd.py, and ptk updator). dexhunter's only xonsh PR is #6644 on tokenize. Open refactor issues cover environ, jobs, commands cache, events, and alias reprs, not ANSI formatting."
+  },
+  {
+    "upstream_repo": "xonsh/xonsh",
+    "head_sha": "b3c9e1e34458b7464ad9c3ba4655f89c09d95d34",
+    "file": "xonsh/completers/path.py",
+    "function": "_complete_path_raw",
+    "native_test_cmd": "python -m pytest tests/completers/test_path_completers.py",
+    "bench_cmd": "python osspr-intake/harness/complete_path_raw.py",
+    "metric_kind": "peak_memory_bytes",
+    "baseline_value": 3695550,
+    "baseline_noise_pct": 0.0,
+    "metric_benchmark": "python osspr-intake/harness/complete_path_raw.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "Tab-complete inside a directory of 8,000 source files with the default GLOB_SORTED listing (cdpath off, since the line is not a cd command).",
+    "notes": "The function stores every glob match in a set, copies each path through _normpath into a second set, and _quote_paths allocates a third set while calling os.path.isdir on every entry. The returned completion set is about 1.2 MiB; the traced peak is 3.70 MiB, so one pass over a scandir listing can shed more than 1 MiB and still return the same strings. Five peaks were identical. Overlap: open PR #6639 touches xonsh/completer.py, xonsh/completers/python.py, and xonsh/completers/tools.py, not path.py. No PR merged since 2026-10-12 touches path completion. dexhunter has no completer PR. Not named by an open refactor or deprecation issue."
+  },
+  {
+    "upstream_repo": "xonsh/xonsh",
+    "head_sha": "b3c9e1e34458b7464ad9c3ba4655f89c09d95d34",
+    "file": "xonsh/history/sqlite.py",
+    "function": "SqliteHistory.all_items",
+    "native_test_cmd": "python -m pytest tests/history/test_history_sqlite.py",
+    "bench_cmd": "python osspr-intake/harness/history_all_items.py",
+    "metric_kind": "peak_memory_bytes",
+    "baseline_value": 6838658,
+    "baseline_noise_pct": 0.0005,
+    "metric_benchmark": "python osspr-intake/harness/history_all_items.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "Iterate all_items() over a 24,000-row sqlite history (command text, cwd, timestamps, mixed sessions) without retaining the yielded dicts.",
+    "notes": "all_items goes through xh_sqlite_items and _xh_sqlite_get_records, which cursor.fetchall() the entire table into tuples before any dict is yielded. The caller in this harness keeps only a count, and the traced peak is still 6.84 MiB, so streaming rows inside all_items keeps the same dict sequence and can drop multiple MiB. Five-run spread was 32 bytes (0.0005%). Overlap: open PR #6636 touches xonsh/history/json.py and xonsh/history/main.py only. No PR merged since 2026-10-12 touches xonsh/history/sqlite.py. dexhunter has no history PR. Sqlite history is not marked deprecated or being moved."
+  },
+  {
+    "upstream_repo": "xonsh/xonsh",
+    "head_sha": "b3c9e1e34458b7464ad9c3ba4655f89c09d95d34",
+    "file": "xonsh/history/sqlite.py",
+    "function": "xh_sqlite_erasedups",
+    "native_test_cmd": "python -m pytest tests/history/test_history_sqlite.py",
+    "bench_cmd": "python osspr-intake/harness/history_erasedups.py",
+    "baseline_median_ms": 996.9219,
+    "baseline_noise_pct": 2.4312,
+    "tests_pass_on_baseline": true,
+    "workload": "Deduplicate a 9,000-row sqlite history: 3,000 distinct commands stored three times each; each sample rebuilds that database and times one erasedups call.",
+    "notes": "xh_sqlite_erasedups loads every duplicated command, then runs a SELECT, a DELETE, and an UPDATE per group (about 9,000 statements here) before returning the same (removed, total) pair. One grouped DELETE plus one UPDATE inside this function keeps the newest row and the summed frequency and is far more than 10 ms faster than the ~997 ms median. Five-run full spread was 2.4312%. Overlap check is the same as SqliteHistory.all_items: open history work is json.py and main.py (#6636), nothing merged since 2026-10-12 touches sqlite.py, and dexhunter has no history PR."
+  }
+]
